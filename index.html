@@ -559,7 +559,8 @@ dialog h2.dt { font-family: var(--font-display); font-weight: 400; font-size: 24
     { id: "club", label: "동아리" },
     { id: "daily", label: "일상" },
     { id: "class", label: "수업 내용", subj: true },
-    { id: "event", label: "학교 행사", date: true }
+    { id: "event", label: "학교 행사", date: true },
+    { id: "exam", label: "시험 공부", subj: true }
   ];
   var CAT_BY = {};
   CATS.forEach(function (c) { CAT_BY[c.id] = c; });
@@ -715,7 +716,7 @@ dialog h2.dt { font-family: var(--font-display); font-weight: 400; font-size: 24
     var i = dueInfo(p);
     if (!i) return null;
     var cls = "due" + (p.status === "done" || i.n < 0 ? " past" : i.n <= 3 ? " urgent" : "");
-    return h("p", { class: cls }, h("b", { text: i.label }), h("span", { text: i.text + (p.cat === "class" ? " 수업" : p.cat === "event" ? " 행사" : " 수행") + (p.status === "done" ? " · 끝냄" : "") }));
+    return h("p", { class: cls }, h("b", { text: i.label }), h("span", { text: i.text + (p.cat === "class" ? " 수업" : p.cat === "event" ? " 행사" : p.cat === "exam" ? " 시험" : " 수행") + (p.status === "done" ? " · 끝냄" : "") }));
   }
   function dueRank(p) {
     var i = dueInfo(p);
@@ -1135,7 +1136,7 @@ dialog h2.dt { font-family: var(--font-display); font-weight: 400; font-size: 24
   }
 
   var TILE_ART = {
-    perf: ["#FF8FA3", "#FFD36B", 35], club: ["#A99BFA", "#8FD3FF", 120], daily: ["#6FDCCB", "#C9F27A", 70], "class": ["#FFB574", "#FFE27A", 150], event: ["#FF9EC7", "#C7B3FF", 55]
+    perf: ["#FF8FA3", "#FFD36B", 35], club: ["#A99BFA", "#8FD3FF", 120], daily: ["#6FDCCB", "#C9F27A", 70], "class": ["#FFB574", "#FFE27A", 150], event: ["#FF9EC7", "#C7B3FF", 55], exam: ["#7FB2FF", "#B8F0E0", 160]
   };
   function renderHome(home) {
     var el = $("home");
@@ -1295,7 +1296,7 @@ dialog h2.dt { font-family: var(--font-display); font-weight: 400; font-size: 24
     var c = CAT_BY[$("f-cat").value];
     $("f-subject-wrap").hidden = !(c && c.subj);
     $("f-due-wrap").hidden = !(c && (c.subj || c.date));
-    $("f-due-label").textContent = c && c.id === "class" ? "수업 날짜" : c && c.id === "event" ? "행사 날짜" : "수행 날짜 (언제 하나요)";
+    $("f-due-label").textContent = c && c.id === "class" ? "수업 날짜" : c && c.id === "event" ? "행사 날짜" : c && c.id === "exam" ? "시험 날짜" : "수행 날짜 (언제 하나요)";
   }
   function openForm(p) {
     editingId = p ? p.id : null;
@@ -1483,7 +1484,7 @@ dialog h2.dt { font-family: var(--font-display); font-weight: 400; font-size: 24
   function validCat(v) { return v === "home" || v === "all" || v === "none" || !!CAT_BY[v]; }
   function applyCat(id) {
     filter.cat = id; filter.subject = ""; filter.status = "all"; view = "projects";
-    filter.sort = id === "perf" || id === "event" ? "due" : "updated";
+    filter.sort = id === "perf" || id === "event" || id === "exam" ? "due" : "updated";
     $("sort").value = filter.sort;
   }
   function readHash() { var v = location.hash.replace("#", ""); v = validCat(v) ? v : "home"; if (v !== filter.cat) applyCat(v); }
@@ -1621,7 +1622,7 @@ dialog h2.dt { font-family: var(--font-display); font-weight: 400; font-size: 24
       var li = lsGet(LS_KEY, null), lt = lsGet(LS_KEY + ".tomb", {});
       if (Array.isArray(li)) merge({ projects: li, tomb: lt && typeof lt === "object" ? lt : {} });
     }
-    function persist() { foldLocal(); canon(); writeAll(); onData(items); }
+    function persist() { foldLocal(); canon(); writeAll(); onData(items); if (lastMsg) setStatus(lastMsg, lastBad); }
     function reconcile() {
       var raw = lsRaw(LS_KEY);
       if (raw === null) { if (items.length || cfg.token) writeAll(); return; }
@@ -1633,7 +1634,9 @@ dialog h2.dt { font-family: var(--font-display); font-weight: 400; font-size: 24
       if (JSON.stringify(lsGet(LS_KEY, [])) !== JSON.stringify(items)) writeAll();
     }
     function hhmm(ts) { var d = new Date(ts); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+    var lastMsg = "", lastBad = false;
     function setStatus(msg, bad) {
+      lastMsg = msg; lastBad = !!bad;
       $("y-status").textContent = msg;
       var line = $("sync-line");
       line.textContent = "";
